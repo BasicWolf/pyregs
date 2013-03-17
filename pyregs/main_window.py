@@ -1,11 +1,12 @@
 import types
+import re
 
 import tkinter as tk
 import tkinter.font as tkfont
 import tkinter.ttk
 ttk = tkinter.ttk
 
-from .ui_util import PRText
+from .ui_util import PRText, PRTimer, PRStatusBar
 from .util import bind
 from .tooltip import ToolTip
 
@@ -22,6 +23,8 @@ class MainWindow:
         FRAME_HEIGHT = 120
         FRAME_WIDTH = 240
         TEXT_WIDTH_CHARS = 80
+
+        self._input_timer = PRTimer(root, 300, self._on_input_modified)
 
         master_frame = ttk.Frame(root)
         master_frame.grid()
@@ -40,24 +43,19 @@ class MainWindow:
         )
         frame.pack()
 
-        txt_pattern = PRText(
+        self.txt_pattern = PRText(
             frame,
             height=6,
             width=TEXT_WIDTH_CHARS
         )
-        txt_pattern.pack()
-
-
-        def f(self, event=None):
-            print('aa')
-#        bind(txt_pattern.on_modified, f)
-
+        self.txt_pattern.pack()
+        bind(self.txt_pattern.on_modified, self._input_timer.restart)
 
         #--- setup the analyzed text frame ---#
         #-------------------------------------#
         frame = tk.LabelFrame(
             master_frame,
-            text='Processed text',
+            text='Analyzed text',
             bd=2,
             height=FRAME_HEIGHT,
             width=FRAME_WIDTH,
@@ -65,12 +63,13 @@ class MainWindow:
             font=self._font
         )
         frame.pack()
-        txt_ptext = PRText(
+        self.txt_atext = PRText(
             frame,
             height=10,
             width=TEXT_WIDTH_CHARS
         )
-        txt_ptext.pack()
+        self.txt_atext.pack()
+        bind(self.txt_atext.on_modified, self._input_timer.restart)
 
         #--- setup results frame and notebook ---#
         #----------------------------------------#
@@ -84,6 +83,16 @@ class MainWindow:
             font=self._font
         )
         results_frame.pack(fill=tk.X)
+
+        # TODO: grid layout
+        # http://effbot.org/tkinterbook/grid.htm
+        lbl = ttk.Label(results_frame, wraplength='4i', justify=tk.LEFT, anchor=tk.N,
+                        text='Match #:')
+        lbl.pack()
+        self.match_spinbox = tk.Spinbox(results_frame, from_=0, to=10)
+        self.match_spinbox.pack(anchor=tk.E)
+
+        # setup notebook
         nb = ttk.Notebook(results_frame)
         # extend bindings to top level window allowing
         #   CTRL+TAB - cycles thru tabs
@@ -162,6 +171,34 @@ class MainWindow:
         frame.grid_columnconfigure(0, weight=1)
         frame.grid_rowconfigure(0, weight=1)
         nb.add(frame, text='Group')
+
+        # STATUS BAR #
+        # ---------- #
+        self.status_bar = PRStatusBar(master_frame)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+    def _on_input_modified(self):
+        pattern_text = self.txt_pattern.get('0.0', tk.END)
+        analyzed_text = self.txt_atext.get('0.0', tk.END)
+        pattern_text = pattern_text.strip()
+        analyzed_text = analyzed_text.strip()
+
+        if pattern_text == '' or analyzed_text == '':
+            return
+
+        self._analyze(pattern_text, analyzed_text)
+
+    def _analyze(self, pattern_text, analyzed_text, flags=0):
+        self.status_bar.text = 'Compiling...'
+        try:
+            reo = re.compile(pattern_text)
+            self.status_bar.text = ''
+        except Exception:
+            self.status_bar.color = 'red'
+            self.status_bar.text = 'Error in regular expression pattern'
+            return
+        mo = reo.match(analyzed_text, flags)
+        
 
     # def OnBigger(self):
     #     '''Make the font 2 points bigger'''

@@ -1,8 +1,9 @@
-from tkinter import Text
+import time
+import tkinter as tk
 
 
 # From:
-# http://code.activestate.com/recipe/464635-call-a-callback-when-a-tkintertext-is-modified/
+# http://code.activestate.com/recipes/464635-call-a-callback-when-a-tkintertext-is-modified/
 class ModifiedMixin:
     """Class to allow a Tkinter Text widget to notice when it's modified.
 
@@ -18,7 +19,7 @@ class ModifiedMixin:
         self._clear_modified_flag()
 
         # Bind the <<Modified>> virtual event to the internal callback.
-        self.bind_all('<<Modified>>', self._on_modified)
+        self.bind('<<Modified>>', self._on_modified)
 
 
     def _on_modified(self, event=None):
@@ -61,13 +62,57 @@ class ModifiedMixin:
         #     self._reseting_modified_flag = False
 
 
-class PRText(ModifiedMixin, Text):
+class PRText(ModifiedMixin, tk.Text):
     def __init__(self, *args, **kwargs):
-        Text.__init__(self, *args, **kwargs)
+        tk.Text.__init__(self, *args, **kwargs)
         ModifiedMixin.__init__(self)
 
-    def on_modified(self, event=None):
-        '''
-        Override this method do do work when the Text is modified.
-        '''
-        print('Hi there.')
+# From:
+# http://www.pythonware.com/library/tkinter/introduction/x996-status-bars.htm
+class PRStatusBar(tk.Frame):
+    def __init__(self, master):
+        tk.Frame.__init__(self, master)
+        self.label = tk.Label(self, bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.label.pack(fill=tk.X)
+
+    @property
+    def text(self):
+        return self.label["text"]
+
+    @text.setter
+    def text(self, text):
+        self.label.config(text=text)
+        self.label.update_idletasks()
+
+    @property
+    def color(self):
+        return self.label['fg']
+
+    @color.setter
+    def color(self, color_string):
+        self.label.config(fg=color_string)
+        self.label.update_idletasks()
+
+class PRTimer:
+    BASE_TICK = 100
+
+    def __init__(self, tk, period, callback):
+        self._tk = tk
+        self.activated = False
+        self.callback = callback
+        self.started_time = 0
+        self.period = period / 1000
+        self._tick()
+
+    def restart(self, *args, **kwargs):
+        self.activated = True
+        self.started_time = time.time()
+
+    def stop(self):
+        self.activated = False
+
+    def _tick(self):
+        if self.activated and time.time() - self.started_time > self.period:
+            self.activated = False
+            self.callback()
+        self._tk.after(self.BASE_TICK, self._tick)

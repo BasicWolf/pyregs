@@ -27,7 +27,7 @@ class MainWindow:
         self._input_timer = PRTimer(root, 300, self._on_input_modified)
 
         master_frame = ttk.Frame(root)
-        master_frame.grid()
+        master_frame.pack()
 
 
         #--- setup pattern frame ---#
@@ -82,15 +82,17 @@ class MainWindow:
             relief=tk.GROOVE,
             font=self._font
         )
-        results_frame.pack(fill=tk.X)
 
-        # TODO: grid layout
-        # http://effbot.org/tkinterbook/grid.htm
+        results_frame.columnconfigure(0, weight=8)
+        results_frame.columnconfigure(1, weight=1)
+        results_frame.columnconfigure(2, weight=1)
+
+        results_frame.pack(fill=tk.X)
         lbl = ttk.Label(results_frame, wraplength='4i', justify=tk.LEFT, anchor=tk.N,
                         text='Match #:')
-        lbl.pack()
+        lbl.grid(row=0, column=1, sticky=(tk.E,))
         self.match_spinbox = tk.Spinbox(results_frame, from_=0, to=10)
-        self.match_spinbox.pack(anchor=tk.E)
+        self.match_spinbox.grid(row=0, column=2, sticky=(tk.E,))
 
         # setup notebook
         nb = ttk.Notebook(results_frame)
@@ -99,20 +101,11 @@ class MainWindow:
         #   SHIFT+CTRL+TAB - previous tab
         #   ALT+K - select tab using mnemonic (K = underlined letter)
         nb.enable_traversal()
-        nb.pack(fill=tk.BOTH, expand=tk.Y, padx=2, pady=3)
-
+        # nb.pack(fill=tk.BOTH, expand=tk.Y, padx=2, pady=3)
+        nb.grid(row=1, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W))
         frame = ttk.Frame(nb)
 
-        msg = ("Ttk is the new Tk themed widget set. One of the widgets "
-               "it includes is the notebook widget, which provides a set "
-               "of tabs that allow the selection of a group of panels, "
-               "each with distinct content. They are a feature of many "
-               "modern user interfaces. Not only can the tabs be selected "
-               "with the mouse, but they can also be switched between "
-               "using Ctrl+Tab when the notebook page heading itself is "
-               "selected. Note that the second tab is disabled, and cannot "
-               "be selected.")
-
+        msg = 'HELLO WORLD'
         lbl = ttk.Label(frame, wraplength='4i', justify=tk.LEFT, anchor=tk.N,
                         text=msg)
         # position and set resize behaviour

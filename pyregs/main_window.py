@@ -9,21 +9,30 @@ ttk = tkinter.ttk
 from .ui_util import PRText, PRTimer, PRStatusBar
 from .util import bind
 from .tooltip import ToolTip
+from . import analyzer
 
 
 class MainWindow:
+    ANALYZER_CHECK_PERIOD = 100
+
     def __init__(self, root):
+        self._root = root
+        self._setup_analyzer()
         self._setup_font()
-        self._setup_ui(root)
+        self._setup_ui()
+
+    def _setup_analyzer(self):
+        self._analyzer = analyzer.RegExAnalyzer()
 
     def _setup_font(self):
         self._font = tkfont.Font(family="Helvetica", size=11)
 
-    def _setup_ui(self, root):
+    def _setup_ui(self):
         FRAME_HEIGHT = 120
         FRAME_WIDTH = 240
         TEXT_WIDTH_CHARS = 80
 
+        root = self._root
         self._input_timer = PRTimer(root, 300, self._on_input_modified)
 
         master_frame = ttk.Frame(root)
@@ -91,9 +100,10 @@ class MainWindow:
         lbl = ttk.Label(results_frame, wraplength='4i', justify=tk.LEFT, anchor=tk.N,
                         text='Match #:')
         lbl.grid(row=0, column=1, sticky=(tk.E,))
-        self.match_spinbox = tk.Spinbox(results_frame, from_=0, to=10)
-        self.match_spinbox.grid(row=0, column=2, sticky=(tk.E,))
-
+        match_spinbox = tk.Spinbox(results_frame, from_=0, to=10)
+        match_spinbox.grid(row=0, column=2, sticky=(tk.E,))
+        match_spinbox.config(state='disabled')
+        self.match_spinbox = match_spinbox
         # setup notebook
         nb = ttk.Notebook(results_frame)
         # extend bindings to top level window allowing
@@ -104,16 +114,30 @@ class MainWindow:
         # nb.pack(fill=tk.BOTH, expand=tk.Y, padx=2, pady=3)
         nb.grid(row=1, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W))
         frame = ttk.Frame(nb)
+        frame.pack()
+        match_txt = tk.Text(frame,
+                            height=10,
+                            width=TEXT_WIDTH_CHARS )
 
-        msg = 'HELLO WORLD'
-        lbl = ttk.Label(frame, wraplength='4i', justify=tk.LEFT, anchor=tk.N,
-                        text=msg)
-        # position and set resize behaviour
-        lbl.grid(row=0, column=0, columnspan=2, sticky='new', pady=5)
-        frame.rowconfigure(1, weight=1)
-        frame.columnconfigure((0,1), weight=1, uniform=1)
-        # add to notebook (underline = index for short-cut character)
-        nb.add(frame, text='Description', underline=0, padding=2)
+        match_txt.pack(expand=1, fill=tk.BOTH)
+        self.match_txt = match_txt
+        nb.add(frame, text='Match', underline=0, padding=2)
+
+        # NEXT FRAME
+        frame = ttk.Frame(nb)
+        frame.pack(fill='both', expand=True)
+        tree_columns = ('Group', 'Value')
+
+        tree = ttk.Treeview(columns=tree_columns, show="headings", height=5)
+        vsb = ttk.Scrollbar(orient="vertical", command=tree.yview)
+
+        tree.configure(yscrollcommand=vsb.set)
+        tree.grid(column=0, row=0, sticky='nsew', in_=frame)
+        vsb.grid(column=1, row=0, sticky='ns', in_=frame)
+
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_rowconfigure(0, weight=1)
+        nb.add(frame, text='Group')
 
         # NEXT FRAME
         #----------
@@ -148,23 +172,6 @@ class MainWindow:
         # add to notebook (underline = index for short-cut character)
         nb.add(frame, text='Options')
 
-        # NEXT FRAME
-        frame = ttk.Frame(nb)
-        frame.pack(fill='both', expand=True)
-        tree_columns = ('Group', 'Value')
-
-
-        tree = ttk.Treeview(columns=tree_columns, show="headings")
-        vsb = ttk.Scrollbar(orient="vertical", command=tree.yview)
-
-        tree.configure(yscrollcommand=vsb.set)
-        tree.grid(column=0, row=0, sticky='nsew', in_=frame)
-        vsb.grid(column=1, row=0, sticky='ns', in_=frame)
-
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_rowconfigure(0, weight=1)
-        nb.add(frame, text='Group')
-
         # STATUS BAR #
         # ---------- #
         self.status_bar = PRStatusBar(master_frame)
@@ -182,16 +189,27 @@ class MainWindow:
         self._analyze(pattern_text, analyzed_text)
 
     def _analyze(self, pattern_text, analyzed_text, flags=0):
-        self.status_bar.text = 'Compiling...'
-        try:
-            reo = re.compile(pattern_text)
-            self.status_bar.text = ''
-        except Exception:
-            self.status_bar.color = 'red'
-            self.status_bar.text = 'Error in regular expression pattern'
-            return
-        mo = reo.match(analyzed_text, flags)
-        
+        self._analyzer.stop()
+        self.match_spinbox.config(state='disabled')
+        self._analyzer = analyzer.RegExAnalyzer(pattern_text,
+                                                analyzed_text,
+                                                flags)
+        self._analyzer.start()
+        self._check_analyzer()
+
+    def _check_analyzer(self):
+        anl = self._analyzer
+        if anl.state == analyzer.RUNNING:
+            self._root.after(self.ANALYZER_CHECK_PERIOD, self._check_analyzer)
+        elif anl.state == analyzer.FINISHED_SUCCESS:
+            self.match_spinbox.config(state='normal',
+                                      from_=0,
+                                      to=len(anl.matches) - 1)
+        elif anl.state == analyzer.FINISHED_ERROR:
+            pass
+
+        self.status_bar.text = anl.status
+
 
     # def OnBigger(self):
     #     '''Make the font 2 points bigger'''

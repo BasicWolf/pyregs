@@ -62,6 +62,18 @@ class ModifiedMixin:
         #     self._reseting_modified_flag = False
 
 
+myvar = StringVar()
+def mywarWritten(*args):
+    print "mywarWritten",myvar.get()
+
+myvar.trace("w", mywarWritten)
+
+label = Label(root, textvariable=myvar)
+label.pack()
+
+text_entry = Entry(root, textvariable=myvar)
+text_entry.pack()
+
 class PRText(ModifiedMixin, tk.Text):
     def __init__(self, *args, **kwargs):
         tk.Text.__init__(self, *args, **kwargs)
@@ -93,26 +105,26 @@ class PRStatusBar(tk.Frame):
         self.label.config(fg=color_string)
         self.label.update_idletasks()
 
-class PRTimer:
+class Timer:
     BASE_TICK = 100
 
     def __init__(self, tk, period, callback):
         self._tk = tk
-        self.activated = False
+        self.started = False
         self.callback = callback
         self.started_time = 0
         self.period = period / 1000
         self._tick()
 
     def restart(self, *args, **kwargs):
-        self.activated = True
+        self.started = True
         self.started_time = time.time()
 
     def stop(self):
-        self.activated = False
+        self.started = False
 
     def _tick(self):
-        if self.activated and time.time() - self.started_time > self.period:
-            self.activated = False
+        if self.started and time.time() - self.started_time > self.period:
+            self.started = False
             self.callback()
         self._tk.after(self.BASE_TICK, self._tick)

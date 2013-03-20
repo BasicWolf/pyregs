@@ -6,8 +6,8 @@ import tkinter.font as tkfont
 import tkinter.ttk
 ttk = tkinter.ttk
 
-from .ui_util import PRText, PRTimer, PRStatusBar
-from .util import bind
+from .ui_util import PRText, Timer, PRStatusBar
+from .util import bind, log_except
 from .tooltip import ToolTip
 from . import analyzer
 
@@ -33,7 +33,7 @@ class MainWindow:
         TEXT_WIDTH_CHARS = 80
 
         root = self._root
-        self._input_timer = PRTimer(root, 300, self._on_input_modified)
+        self._input_timer = Timer(root, 300, self._on_input_modified)
 
         master_frame = ttk.Frame(root)
         master_frame.pack()
@@ -52,13 +52,13 @@ class MainWindow:
         )
         frame.pack()
 
-        self.txt_pattern = PRText(
+        self.pattern_tbox = PRText(
             frame,
             height=6,
             width=TEXT_WIDTH_CHARS
         )
-        self.txt_pattern.pack()
-        bind(self.txt_pattern.on_modified, self._input_timer.restart)
+        self.pattern_tbox.pack()
+        bind(self.pattern_tbox.on_modified, self._input_timer.restart)
 
         #--- setup the analyzed text frame ---#
         #-------------------------------------#
@@ -72,13 +72,13 @@ class MainWindow:
             font=self._font
         )
         frame.pack()
-        self.txt_atext = PRText(
+        self.analyzed_tbox = PRText(
             frame,
             height=10,
             width=TEXT_WIDTH_CHARS
         )
-        self.txt_atext.pack()
-        bind(self.txt_atext.on_modified, self._input_timer.restart)
+        self.analyzed_tbox.pack()
+        bind(self.analyzed_tbox.on_modified, self._input_timer.restart)
 
         #--- setup results frame and notebook ---#
         #----------------------------------------#
@@ -115,12 +115,12 @@ class MainWindow:
         nb.grid(row=1, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W))
         frame = ttk.Frame(nb)
         frame.pack()
-        match_txt = tk.Text(frame,
+        match_tbox = tk.Text(frame,
                             height=10,
                             width=TEXT_WIDTH_CHARS )
 
-        match_txt.pack(expand=1, fill=tk.BOTH)
-        self.match_txt = match_txt
+        match_tbox.pack(expand=1, fill=tk.BOTH)
+        self.match_tbox = match_tbox
         nb.add(frame, text='Match', underline=0, padding=2)
 
         # NEXT FRAME
@@ -178,8 +178,8 @@ class MainWindow:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def _on_input_modified(self):
-        pattern_text = self.txt_pattern.get('0.0', tk.END)
-        analyzed_text = self.txt_atext.get('0.0', tk.END)
+        pattern_text = self.pattern_tbox.get('0.0', tk.END)
+        analyzed_text = self.analyzed_tbox.get('0.0', tk.END)
         pattern_text = pattern_text.strip()
         analyzed_text = analyzed_text.strip()
 
@@ -188,27 +188,46 @@ class MainWindow:
 
         self._analyze(pattern_text, analyzed_text)
 
+    @log_except
     def _analyze(self, pattern_text, analyzed_text, flags=0):
-        self._analyzer.stop()
+        # configure widgets
         self.match_spinbox.config(state='disabled')
+        self.match_tbox.delete(1.0, tk.END)
+        # restart analyzer
+        self._analyzer.stop()
         self._analyzer = analyzer.RegExAnalyzer(pattern_text,
                                                 analyzed_text,
                                                 flags)
         self._analyzer.start()
         self._check_analyzer()
 
+    @log_except
     def _check_analyzer(self):
         anl = self._analyzer
-        if anl.state == analyzer.RUNNING:
-            self._root.after(self.ANALYZER_CHECK_PERIOD, self._check_analyzer)
-        elif anl.state == analyzer.FINISHED_SUCCESS:
-            self.match_spinbox.config(state='normal',
-                                      from_=0,
-                                      to=len(anl.matches) - 1)
-        elif anl.state == analyzer.FINISHED_ERROR:
-            pass
+        # RegExAnalayzer.state is a value from another thread.
+        # Thus, we have to save it's state here once for the rest
+        # of the routine in order to emulate swtich()-like construction.
+        state = anl.state
+        status = anl.status
+        self.status_bar.text = status
 
-        self.status_bar.text = anl.status
+        if state == analyzer.FINISHED_SUCCESS:
+            # enable and setup the widgets
+            self.match_tbox.insert(1.0, anl.text)
+            if len(anl.matches) > 0:
+                self.match_spinbox.config(state='normal',
+                                          from_=0,
+                                          to=len(anl.matches) - 1)
+        elif state == analyzer.FINISHED_ERROR:
+            pass
+        else:
+            self._root.after(self.ANALYZER_CHECK_PERIOD, self._check_analyzer)
+
+
+    def _on_match_spinbox_changed(self):
+        #match_tbox mark_set(tk.INSERT, index)
+        #1.0+%d chars
+        pass
 
 
     # def OnBigger(self):

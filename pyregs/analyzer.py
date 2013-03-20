@@ -1,7 +1,7 @@
 import re
 import threading
 
-INACTIVE = 0
+IDLE = 0
 RUNNING = 1
 FINISHED_SUCCESS = 2
 FINISHED_ERROR = 3
@@ -11,7 +11,7 @@ class RegExAnalyzer(threading.Thread):
         self._lock = threading.Lock()
         self._stop_flag_lock = threading.Lock()
         self._status = ''
-        self._state = INACTIVE
+        self._state = IDLE
         self._matches = []
         self._stop_flag = False
 
@@ -43,8 +43,7 @@ class RegExAnalyzer(threading.Thread):
         mcount = len(self._matches)
         self._set_state(FINISHED_SUCCESS,
                         'Analysis complete, {} {} found.'
-                        .format(mcount,
-                                ['match', 'matches'][mcount != 1]))
+                        .format(mcount, ['match', 'matches'][mcount != 1]))
 
     def stop(self):
         with self._stop_flag_lock:

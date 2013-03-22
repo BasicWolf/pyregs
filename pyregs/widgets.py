@@ -1,10 +1,11 @@
 import time
 import tkinter as tk
-
+import tkinter.ttk as ttk
+from idlelib.WidgetRedirector import WidgetRedirector
 
 # From:
 # http://code.activestate.com/recipes/464635-call-a-callback-when-a-tkintertext-is-modified/
-class ModifiedMixin:
+class TextModifiedMixin:
     """Class to allow a Tkinter Text widget to notice when it's modified.
 
     To use this mixin, subclass from Tkinter.Text and the mixin, then write
@@ -47,37 +48,108 @@ class ModifiedMixin:
         Uses the _reseting_modified_flag attribute as a sentinel against
         triggering _on_modified() recursively when setting 'modified' to 0.
         """
-
-        # Set the sentinel.
         self._reseting_modified_flag = True
         self.edit_modified(0)
         self._reseting_modified_flag = False
 
-        # try:
-        #     # Set 'modified' to 0.  This will also trigger the <<Modified>>
-        #     # virtual event which is why we need the sentinel.
-        #     self.tk.call(self._w, 'edit', 'modified', 0)
-        # finally:
-        #     # Clean the sentinel.
-        #     self._reseting_modified_flag = False
+
+class EntryModifiedMixin:
+    def __init__(self):
+        self._var = tk.StringVar()
+        self._var.trace('w', self._on_modified)
+        self.config(textvariable=self._var)
+
+    def _on_modified(self, *args):
+        self.on_modified(self._var.get())
+
+    def on_modified(self, value):
+        pass
 
 
-myvar = StringVar()
-def mywarWritten(*args):
-    print "mywarWritten",myvar.get()
+class PRText(TextModifiedMixin, tk.Text):
+    def __init__(self, master, *args, **kwargs):
+        scrollbar = ttk.Scrollbar(master)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        kwargs.update(dict(wrap=tk.WORD, yscrollcommand=scrollbar.set))
+        tk.Text.__init__(self, master, *args, **kwargs)
+        scrollbar.config(command=self.yview)
+        TextModifiedMixin.__init__(self)
 
-myvar.trace("w", mywarWritten)
+    def clear(self):
+        self.delete(1.0, tk.END)
 
-label = Label(root, textvariable=myvar)
-label.pack()
+    @property
+    def text(self):
+        return self.get(0.0, tk.END)
 
-text_entry = Entry(root, textvariable=myvar)
-text_entry.pack()
+    @text.setter
+    def text(self, value):
+        self.clear()
+        self.insert(0.0, value)
 
-class PRText(ModifiedMixin, tk.Text):
+
+class PRReadonlyText(PRText):
     def __init__(self, *args, **kwargs):
-        tk.Text.__init__(self, *args, **kwargs)
-        ModifiedMixin.__init__(self)
+        PRText.__init__(self, *args, **kwargs)
+        self._insert = self.insert
+        self._delete = self.delete
+        self._redirector = WidgetRedirector(self)
+        self.readonly = True
+
+    def clear(self):
+        self.readonly = False
+        self._delete(1.0, tk.END)
+        self.readonly = True
+
+    @property
+    def readonly(self):
+        return self._readonly
+
+    @readonly.setter
+    def readonly(self, value):
+        _break_func = lambda *args, **kw: 'break'
+        if value:
+            self.insert = self._redirector.register('insert', _break_func)
+            self.delete = self._redirector.register('delete', _break_func)
+        else:
+            self.insert = self._redirector.unregister('insert')
+            self.delete = self._redirector.unregister('delete')
+        self._readonly = value
+
+    @property
+    def text(self):
+        return self.get(0.0, tk.END)
+
+    @text.setter
+    def text(self, value):
+        self.readonly = False
+        self._delete(0.0, tk.END)
+        self._insert(0.0, value)
+        self.readonly = True
+
+class PRTreeview(ttk.Treeview):
+    def clear(self):
+        tree_elems = self.get_children()
+        for elem in tree_elems:
+            self.delete(elem)
+
+
+class PRSpinbox(EntryModifiedMixin, tk.Spinbox):
+    def __init__(self, *args, **kwargs):
+        tk.Spinbox.__init__(self, *args, **kwargs)
+        EntryModifiedMixin.__init__(self)
+
+    def clear(self):
+        self.delete(0, tk.END)
+
+    @property
+    def text(self):
+        return self.get(0, tk.END)
+
+    @text.setter
+    def text(self, value):
+        self.clear()
+        self.insert(0, value)
 
 # From:
 # http://www.pythonware.com/library/tkinter/introduction/x996-status-bars.htm
@@ -105,6 +177,7 @@ class PRStatusBar(tk.Frame):
         self.label.config(fg=color_string)
         self.label.update_idletasks()
 
+
 class Timer:
     BASE_TICK = 100
 
@@ -128,3 +201,8 @@ class Timer:
             self.started = False
             self.callback()
         self._tk.after(self.BASE_TICK, self._tick)
+
+
+class UIState:
+    match_index_start = None
+    match_index_end = None

@@ -8,6 +8,7 @@ from pyregs import MainWindow
 def main():
     setup_logging()
     root = tk.Tk()
+    root.wm_protocol('WM_DELETE_WINDOW', root.quit)
     main_form = MainWindow(root)
     root.mainloop()
 

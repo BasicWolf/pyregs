@@ -8,11 +8,13 @@ FINISHED_ERROR = 3
 
 class RegExAnalyzer(threading.Thread):
     def __init__(self, pattern='', text='', flags=0):
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._stop_flag_lock = threading.Lock()
         self._status = ''
         self._state = IDLE
         self._matches = []
+        self._re_groups_count = 0
+        self._re_groupindex = {}
         self._stop_flag = False
 
         self.pattern = pattern
@@ -30,17 +32,23 @@ class RegExAnalyzer(threading.Thread):
                             'Error in regular expression pattern')
             return
 
-        self._set_status('Analyzing...')
+        self._set_status('Analyzing (0%)')
 
+        text_len = len(self.text)
         for mo in reo.finditer(self.text):
             with self._lock:
                 self._matches.append(mo)
+                self._set_status('Analyzing ({:.1%})'.format(mo.start() / text_len))
             # check whether we should continue at all
             with self._stop_flag_lock:
                 if self._stop_flag == True:
                     return
 
         mcount = len(self._matches)
+        self._re_groups_count = reo.groups
+        self._re_groupindex = reo.groupindex
+
+
         self._set_state(FINISHED_SUCCESS,
                         'Analysis complete, {} {} found.'
                         .format(mcount, ['match', 'matches'][mcount != 1]))
@@ -85,6 +93,15 @@ class RegExAnalyzer(threading.Thread):
         with self._lock:
             return self._matches
 
+    @property
+    def re_groups_count(self):
+        with self._lock:
+            return self._re_groups_count
+
+    @property
+    def re_groupindex(self):
+        with self._lock:
+            return self._re_groupindex
 
     def __del__(self):
         self.stop()

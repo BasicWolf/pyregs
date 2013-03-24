@@ -26,7 +26,7 @@ class RegExAnalyzer(threading.Thread):
         self._set_state(RUNNING, 'Compiling...')
 
         try:
-            reo = re.compile(self.pattern)
+            reo = re.compile(self.pattern, self.flags)
         except Exception:
             self._set_state(FINISHED_ERROR,
                             'Error in regular expression pattern')

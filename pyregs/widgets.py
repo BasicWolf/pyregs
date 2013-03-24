@@ -3,6 +3,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from idlelib.WidgetRedirector import WidgetRedirector
 
+
 # From:
 # http://code.activestate.com/recipes/464635-call-a-callback-when-a-tkintertext-is-modified/
 class TextModifiedMixin:
@@ -127,6 +128,7 @@ class PRReadonlyText(PRText):
         self._insert(0.0, value)
         self.readonly = True
 
+
 class PRTreeview(ttk.Treeview):
     def clear(self):
         tree_elems = self.get_children()
@@ -154,14 +156,14 @@ class PRSpinbox(EntryModifiedMixin, tk.Spinbox):
 # From:
 # http://www.pythonware.com/library/tkinter/introduction/x996-status-bars.htm
 class PRStatusBar(tk.Frame):
-    def __init__(self, master):
+    def __init__(self, master, **kwargs):
         tk.Frame.__init__(self, master)
-        self.label = tk.Label(self, bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.label = tk.Label(self, bd=1, relief=tk.SUNKEN, anchor=tk.W, **kwargs)
         self.label.pack(fill=tk.X)
 
     @property
     def text(self):
-        return self.label["text"]
+        return self.label['text']
 
     @text.setter
     def text(self, text):
@@ -176,6 +178,29 @@ class PRStatusBar(tk.Frame):
     def color(self, color_string):
         self.label.config(fg=color_string)
         self.label.update_idletasks()
+
+
+class PRCheckbutton(tk.Checkbutton):
+    def __init__(self, *args, **kwargs):
+        self._var = tk.IntVar()
+        self._var.trace('w', self._on_modified)
+        kwargs.update(dict(variable=self._var))
+        tk.Checkbutton.__init__(self, *args, **kwargs)
+
+    def _on_modified(self, *args):
+        self.on_modified(self._var.get() == 1)
+
+    def on_modified(self, checked):
+        pass
+
+    @property
+    def checked(self):
+        return self._var.get() == 1
+
+    @checked.setter
+    def checked(self, value):
+        val = int(value == True)
+        self._var.set(val)
 
 
 class Timer:
@@ -203,6 +228,6 @@ class Timer:
         self._tk.after(self.BASE_TICK, self._tick)
 
 
-class UIState:
-    match_index_start = None
-    match_index_end = None
+# class UIState:
+#     match_index_start = None
+#     match_index_end = None

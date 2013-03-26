@@ -8,7 +8,7 @@ import tkinter.ttk as ttk
 from .widgets import (PRText, PRSpinbox, PRReadonlyText,
                       PRStatusBar, PRTreeview, PRCheckbutton, Timer)
 from .util import bind, log_except
-from .library_window import LibraryWindow
+from .quickref_window import QuickReferenceWindow
 from .tooltip import ToolTip
 from . import analyzer
 
@@ -39,7 +39,7 @@ class MainWindow:
         self.analyzer = analyzer.RegExAnalyzer()
 
     def setup_font(self):
-        self._font = tkfont.Font(family="Helvetica", size=11)
+        self.font = tkfont.Font(family='Helvetica', size=10)
 
     def setup_ui(self):
         FRAME_HEIGHT = 120
@@ -52,21 +52,20 @@ class MainWindow:
         master_frame.pack()
 
         ttk_style = ttk.Style()
-        ttk_style.configure('.',font=self._font)
-
+        ttk_style.configure('.', font=self.font)
         self._input_timer = Timer(root, 300, self.on_input_modified)
 
         #-- setup menu ---#
         #-----------------#
-        menu = tk.Menu(tearoff=False, font=self._font)
+        menu = tk.Menu(tearoff=False, font=self.font)
         root.config(menu=menu)
-        pr_menu = tk.Menu(menu, tearoff=False, font=self._font)
+        pr_menu = tk.Menu(menu, tearoff=False, font=self.font)
         menu.add_cascade(label='PyRegs', menu=pr_menu)
         pr_menu.add_command(label='Exit', command=root.quit)
 
-        tools_menu = tk.Menu(menu, tearoff=False, font=self._font)
+        tools_menu = tk.Menu(menu, tearoff=False, font=self.font)
         menu.add_cascade(label='Tools', menu=tools_menu)
-        tools_menu.add_command(label='Library',
+        tools_menu.add_command(label='Quick reference',
                                command=self.on_tools_library_menu)
 #        tools_menu.add_separator()
 
@@ -80,15 +79,15 @@ class MainWindow:
             height=FRAME_HEIGHT,
             width=FRAME_WIDTH,
             relief=tk.GROOVE,
-            font=self._font
+            font=self.font
         )
         frame.pack()
 
         self.pattern_tbox = PRText(
             frame,
-            height=TEXT_HEIGHT_LINES,
+            height=3,
             width=TEXT_WIDTH_CHARS,
-            font=self._font,
+            font=self.font,
         )
         self.pattern_tbox.pack()
         bind(self.pattern_tbox.on_modified, self._input_timer.restart)
@@ -102,14 +101,14 @@ class MainWindow:
             height=FRAME_HEIGHT,
             width=FRAME_WIDTH,
             relief=tk.GROOVE,
-            font=self._font
+            font=self.font
         )
         frame.pack()
         self.analyzed_tbox = PRText(
             frame,
             height=TEXT_HEIGHT_LINES,
             width=TEXT_WIDTH_CHARS,
-            font=self._font,
+            font=self.font,
         )
         self.analyzed_tbox.pack()
         bind(self.analyzed_tbox.on_modified, self._input_timer.restart)
@@ -123,7 +122,7 @@ class MainWindow:
             width=FRAME_WIDTH,
             bd=2,
             relief=tk.GROOVE,
-            font=self._font
+            font=self.font
         )
 
         results_frame.columnconfigure(0, weight=8)
@@ -138,7 +137,7 @@ class MainWindow:
             results_frame,
             from_=0,
             to=0,
-            font=self._font
+            font=self.font
         )
         match_spinbox.grid(row=0, column=2, sticky=(tk.E,))
         match_spinbox.config(state='disabled')
@@ -159,78 +158,75 @@ class MainWindow:
             frame,
             height=TEXT_HEIGHT_LINES,
             width=TEXT_WIDTH_CHARS,
-            font=self._font,
+            font=self.font,
         )
         match_tbox.tag_config('highlight', background='yellow')
-        match_tbox.pack(expand=1, fill=tk.BOTH)
+        match_tbox.pack(expand=tk.Y, fill=tk.BOTH)
         self.match_tbox = match_tbox
         nb.add(frame, text='Match', underline=0, padding=2)
 
         # NEXT FRAME
         frame = ttk.Frame(nb)
         frame.pack(fill='both', expand=True)
-        tree_columns = ('Group', 'Value')
+        tree_columns = ('group', 'value')
 
-        tree = PRTreeview(columns=tree_columns, show="headings", height=5)
-        vsb = ttk.Scrollbar(orient="vertical", command=tree.yview)
+        tree = PRTreeview(frame, columns=tree_columns, show="headings", height=5)
+        vsb = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=vsb.set)
 
-        for col in ('Group', 'Value'):
-            tree.heading(col, text=col.title())
+        tree.heading('group', text='Group')
+        tree.heading('value', text='Value')
 
-        tree.grid(column=0, row=0, sticky='nsew', in_=frame)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        tree.pack(fill=tk.BOTH, expand=tk.Y)
         self.match_tree = tree
-        vsb.grid(column=1, row=0, sticky='ns', in_=frame)
-
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_rowconfigure(0, weight=1)
         nb.add(frame, text='Group', underline=0)
 
         # NEXT FRAME
         #----------
         frame = ttk.Frame(nb)
         # fframe = flags_frame
-        fframe = tk.LabelFrame(frame, text='Flags', font=self._font)
+        fframe = tk.LabelFrame(frame, text='Flags', font=self.font)
         fframe.grid()
         # frame.rowconfigure(1, weight=1)
         # frame.columnconfigure((0,1), weight=1, uniform=0)
         def _make_tooltip(parent, text):
             ToolTip(parent,
                     wraplength=300,
-                    font=self._font,
+                    font=self.font,
                     text=text)
 
-        cb = PRCheckbutton(fframe, text='ASCII', font=self._font)
+        cb = PRCheckbutton(fframe, text='ASCII', font=self.font)
         cb.grid(row=0, column=0, sticky=tk.W)
         bind(cb.on_modified, self._input_timer.restart)
         _make_tooltip(cb, ASCII_TOOLTIP)
         self.ascii_cb = cb
 
-        cb = PRCheckbutton(fframe, text='IGNORECASE', font=self._font)
+        cb = PRCheckbutton(fframe, text='IGNORECASE', font=self.font)
         cb.grid(row=1, column=0, sticky=tk.W)
         bind(cb.on_modified, self._input_timer.restart)
         _make_tooltip(cb, IGNORECASE_TOOLTIP)
         self.ignorecase_cb = cb
 
-        cb = PRCheckbutton(fframe, text='LOCALE', font=self._font)
+        cb = PRCheckbutton(fframe, text='LOCALE', font=self.font)
         cb.grid(row=2, column=0, sticky=tk.W)
         bind(cb.on_modified, self._input_timer.restart)
         _make_tooltip(cb, LOCALE_TOOLTIP)
         self.locale_cb = cb
 
-        cb = PRCheckbutton(fframe, text='MULTILINE', font=self._font)
+        cb = PRCheckbutton(fframe, text='MULTILINE', font=self.font)
         cb.grid(row=2, column=0, sticky=tk.W)
         bind(cb.on_modified, self._input_timer.restart)
         _make_tooltip(cb, MULTILINTE_TOOLTIP)
         self.multiline_cb = cb
 
-        cb = PRCheckbutton(fframe, text='DOTALL', font=self._font)
+        cb = PRCheckbutton(fframe, text='DOTALL', font=self.font)
         cb.grid(row=3, column=0, sticky=tk.W)
         bind(cb.on_modified, self._input_timer.restart)
         _make_tooltip(cb, _DOTALL_TOOLTIP)
         self.dotall_cb = cb
 
-        cb = PRCheckbutton(fframe, text='VERBOSE', font=self._font)
+        cb = PRCheckbutton(fframe, text='VERBOSE', font=self.font)
         cb.grid(row=4, column=0, sticky=tk.W)
         bind(cb.on_modified, self._input_timer.restart)
         _make_tooltip(cb, VERBOSE_TOOLTIP)
@@ -240,7 +236,7 @@ class MainWindow:
 
         # STATUS BAR #
         # ---------- #
-        self.status_bar = PRStatusBar(master_frame, font=self._font)
+        self.status_bar = PRStatusBar(master_frame, font=self.font)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def on_input_modified(self):
@@ -282,7 +278,7 @@ class MainWindow:
         self.analyzer = analyzer.RegExAnalyzer(pattern_text,
                                                 analyzed_text,
                                                 flags)
-        self._analyzer.start()
+        self.analyzer.start()
         self.check_analyzer()
 
     @log_except
@@ -362,7 +358,7 @@ class MainWindow:
             self.match_tree.insert('', tk.END, values=item)
 
     def on_tools_library_menu(self):
-        LibraryWindow(self.root)
+        QuickReferenceWindow(self.root)
 
 
     # def OnBigger(self):

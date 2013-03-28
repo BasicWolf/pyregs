@@ -1,3 +1,20 @@
+# Copyright (C) 2013 by Zaur Nasibov.
+#
+# This file is part of PyRegs.
+#
+# PyRegs is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# PyRegs is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with PyRegs.  If not, see <http://www.gnu.org/licenses/>.
+
 import types
 import re
 
@@ -9,6 +26,7 @@ from .widgets import (PRText, PRSpinbox, PRReadonlyText,
                       PRStatusBar, PRTreeview, PRCheckbutton, Timer)
 from .util import bind, log_except
 from .quickref_window import QuickReferenceWindow
+from .about_window import AboutWindow
 from .tooltip import ToolTip
 from . import analyzer
 
@@ -67,7 +85,11 @@ class MainWindow:
         menu.add_cascade(label='Tools', menu=tools_menu)
         tools_menu.add_command(label='Quick reference',
                                command=self.on_tools_library_menu)
-#        tools_menu.add_separator()
+
+        help_menu = tk.Menu(menu, tearoff=False, font=self.font)
+        menu.add_cascade(label='Help', menu=help_menu)
+        help_menu.add_command(label='About',
+                              command=self.on_help_about_menu)
 
 
         #--- setup pattern frame ---#
@@ -360,6 +382,8 @@ class MainWindow:
     def on_tools_library_menu(self):
         QuickReferenceWindow(self.root)
 
+    def on_help_about_menu(self):
+        AboutWindow(self.root)
 
     # def OnBigger(self):
     #     '''Make the font 2 points bigger'''

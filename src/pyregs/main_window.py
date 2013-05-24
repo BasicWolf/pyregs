@@ -30,10 +30,8 @@ from .about_window import AboutWindow
 from .tooltip import ToolTip
 from . import analyzer
 
-
 import logging
 log = logging.getLogger(__name__)
-
 
 ASCII_TOOLTIP=r"""Make \w, \W, \b, \B, \d, \D, \s and \S perform ASCII-only matching instead of full Unicode matching. This is only meaningful for Unicode patterns, and is ignored for byte patterns."""
 IGNORECASE_TOOLTIP = """Perform case-insensitive matching; expressions like [A-Z] will match lowercase letters, too. This is not affected by the current locale and works for Unicode characters as expected."""
@@ -41,6 +39,7 @@ LOCALE_TOOLTIP = """Make \w, \W, \b, \B, \s and \S dependent on the current loca
 _DOTALL_TOOLTIP = """Make the '.' special character match any character at all,including a newline; without this flag, '.' will match anything except a newline."""
 MULTILINTE_TOOLTIP = """When specified, the pattern character '^' matches at the beginning of the string and at the beginning of each line (immediately following each newline); and the pattern character '$' matches at the end of the string and at the end of each line (immediately preceding each newline). By default, '^' matches only at the beginning of the string, and '$' only at the end of the string and immediately before the newline (if any) at the end of the string."""
 VERBOSE_TOOLTIP = """Whitespace within the pattern is ignored, except when in a character class or preceded by an unescaped backslash, and, when a line contains a '#' neither in a character class or preceded by an unescaped backslash, all characters from the leftmost such '#' through the end of the line are ignored."""
+
 
 class MainWindow:
     ANALYZER_CHECK_PERIOD = 100
@@ -67,7 +66,7 @@ class MainWindow:
         root = self.root
         root.title('PyRegs')
         master_frame = ttk.Frame(root)
-        master_frame.pack()
+        master_frame.pack(fill=tk.BOTH, expand=True)
 
         ttk_style = ttk.Style()
         ttk_style.configure('.', font=self.font)
@@ -103,7 +102,7 @@ class MainWindow:
             relief=tk.GROOVE,
             font=self.font
         )
-        frame.pack()
+        frame.pack(fill=tk.BOTH)
 
         self.pattern_tbox = PRText(
             frame,
@@ -111,7 +110,7 @@ class MainWindow:
             width=TEXT_WIDTH_CHARS,
             font=self.font,
         )
-        self.pattern_tbox.pack()
+        self.pattern_tbox.pack(fill=tk.BOTH)
         bind(self.pattern_tbox.on_modified, self._input_timer.restart)
 
         #--- setup the analyzed text frame ---#
@@ -125,14 +124,14 @@ class MainWindow:
             relief=tk.GROOVE,
             font=self.font
         )
-        frame.pack()
+        frame.pack(fill=tk.BOTH)
         self.analyzed_tbox = PRText(
             frame,
             height=TEXT_HEIGHT_LINES,
             width=TEXT_WIDTH_CHARS,
             font=self.font,
         )
-        self.analyzed_tbox.pack()
+        self.analyzed_tbox.pack(fill=tk.BOTH)
         bind(self.analyzed_tbox.on_modified, self._input_timer.restart)
 
         #--- setup results frame and notebook ---#
@@ -151,7 +150,7 @@ class MainWindow:
         results_frame.columnconfigure(1, weight=1)
         results_frame.columnconfigure(2, weight=1)
 
-        results_frame.pack(fill=tk.X)
+        results_frame.pack(fill=tk.BOTH, expand=True)
         lbl = ttk.Label(results_frame, wraplength='4i', justify=tk.LEFT, anchor=tk.N,
                         text='Match #:')
         lbl.grid(row=0, column=1, sticky=(tk.E,))
@@ -172,10 +171,9 @@ class MainWindow:
         #   SHIFT+CTRL+TAB - previous tab
         #   ALT+K - select tab using mnemonic (K = underlined letter)
         nb.enable_traversal()
-        # nb.pack(fill=tk.BOTH, expand=tk.Y, padx=2, pady=3)
-        nb.grid(row=1, columnspan=3, sticky=(tk.N, tk.S, tk.E, tk.W))
+        nb.grid(row=1, columnspan=3, sticky=(tk.N + tk.S + tk.E + tk.W))
         frame = ttk.Frame(nb)
-        frame.pack()
+        frame.pack(fill=tk.BOTH, expand=True)
         match_tbox = PRReadonlyText(
             frame,
             height=TEXT_HEIGHT_LINES,
@@ -183,13 +181,13 @@ class MainWindow:
             font=self.font,
         )
         match_tbox.tag_config('highlight', background='yellow')
-        match_tbox.pack(expand=tk.Y, fill=tk.BOTH)
+        match_tbox.pack(fill=tk.BOTH, expand=True)
         self.match_tbox = match_tbox
         nb.add(frame, text='Match', underline=0, padding=2)
 
         # NEXT FRAME
         frame = ttk.Frame(nb)
-        frame.pack(fill='both', expand=True)
+        frame.pack(fill=tk.BOTH, expand=True)
         tree_columns = ('group', 'value')
 
         tree = PRTreeview(frame, columns=tree_columns, show="headings", height=5)
@@ -200,7 +198,7 @@ class MainWindow:
         tree.heading('value', text='Value')
 
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        tree.pack(fill=tk.BOTH, expand=tk.Y)
+        tree.pack(fill=tk.BOTH, expand=True)
         self.match_tree = tree
         nb.add(frame, text='Group', underline=0)
 
@@ -306,7 +304,7 @@ class MainWindow:
     @log_except
     def check_analyzer(self):
         anl = self.analyzer
-        # RegExAnalayzer.state is a value from another thread.
+        # RegExAnalayzer.state is a (safe) value from another thread.
         # Thus, we have to save it's state here once for the rest
         # of the routine in order to emulate swtich()-like construction.
         state = anl.state

@@ -382,13 +382,3 @@ class MainWindow:
 
     def on_help_about_menu(self):
         AboutWindow(self.root)
-
-    # def OnBigger(self):
-    #     '''Make the font 2 points bigger'''
-    #     size = self.customFont['size']
-    #     self.customFont.configure(size=size+2)
-
-    # def OnSmaller(self):
-    #     '''Make the font 2 points smaller'''
-    #     size = self.customFont['size']
-    #     self.customFont.configure(size=size-2)

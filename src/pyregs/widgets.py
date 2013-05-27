@@ -74,7 +74,33 @@ class PRText(TextModifiedMixin, tk.Text):
         kwargs.update(dict(wrap=tk.WORD, yscrollcommand=scrollbar.set))
         tk.Text.__init__(self, master, *args, **kwargs)
         scrollbar.config(command=self.yview)
+        self._setup_menu(master)
         TextModifiedMixin.__init__(self)
+
+    def _setup_menu(self, master, editable=True):
+        #--- Textboxes popoup menu ---#
+        menu = tk.Menu(tearoff=0)
+        cmd_cut = lambda: self.event_generate("<<Cut>>")
+        cmd_copy = lambda: self.event_generate("<<Copy>>")
+        cmd_paste = lambda: self.event_generate("<<Paste>>")
+
+        if editable:
+            menu.add_command(label="Cut", command=cmd_cut)
+
+        menu.add_command(label="Copy", command=cmd_copy)
+
+        if editable:
+            menu.add_command(label="Paste", command=cmd_paste)
+
+        def popup_menu(event):
+            menu.post(event.x_root, event.y_root)
+            menu.focus_set()
+
+        def popupFocusOut(self,event=None):
+            menu.unpost()
+
+        self.bind('<Button-3>', popup_menu)
+        menu.bind("<FocusOut>",popupFocusOut)
 
     def clear(self):
         self.delete(1.0, tk.END)
@@ -89,6 +115,7 @@ class PRText(TextModifiedMixin, tk.Text):
         self.insert(0.0, value)
 
 
+
 class PRReadonlyText(PRText):
     def __init__(self, *args, **kwargs):
         PRText.__init__(self, *args, **kwargs)
@@ -97,6 +124,9 @@ class PRReadonlyText(PRText):
         self._redirector = WidgetRedirector(self)
         self.readonly = True
 
+    def _setup_menu(self, master, editable=False):
+        super(PRReadonlyText, self)._setup_menu(master, editable=False)
+        
     def clear(self):
         self.readonly = False
         self._delete(1.0, tk.END)
@@ -227,7 +257,3 @@ class Timer:
             self.callback()
         self._tk.after(self.BASE_TICK, self._tick)
 
-
-# class UIState:
-#     match_index_start = None
-#     match_index_end = None
